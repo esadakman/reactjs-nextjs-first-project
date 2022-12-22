@@ -10,6 +10,12 @@ export default function Home() {
       <Link href="/posts">
         <h3>Posts</h3>
       </Link>
+      <Link href="/news">
+        <h3>News</h3>
+      </Link>
+      <Link href="/dashboard">
+        <h3>Dashboard</h3>
+      </Link>
     </>
   );
 }

@@ -191,8 +191,163 @@ export default function Post({ post }) {
 
 ### Where can I use getStaticPaths
 
--  `getStaticPaths` must be used with `getStaticProps`
+- `getStaticPaths` must be used with `getStaticProps`
 - You cannot use `getStaticPaths` with `getServerSideProps`
 - You can export `getStaticPaths` from a Dynamic Route that also uses `getStaticProps`
 - You cannot export `getStaticPaths` from non-page file (e.g. your `components` folder)
 - You must export `getStaticPaths` as a standalone function, and not a property of the page component
+
+## [getStaticProps](https://nextjs.org/docs/basic-features/data-fetching/get-static-props)
+
+- If you export a function called `getStaticProps` (Static Site Generation) from a page, Next.js will pre-render this page at build time using the props returned by `getStaticProps`.
+
+```jsx
+export async function getStaticProps(context) {
+  return {
+    props: {}, // will be passed to the page component as props
+  };
+}
+```
+
+### When should I use getStaticProps?
+
+- You should use `getStaticProps` if:
+  - The data required to render th e page is available at build time ahead of a user’s request
+  - The data comes from a headless CMS
+  - The page must be pre-rendered (for SEO) and be very fast — `getStaticProps` generates HTML and JSON files, both of which can be cached by a CDN for performance
+  - The data can be publicly cached (not user-specific). This condition can be bypassed in certain specific situation by using a Middleware to rewrite the path.
+
+### When does getStaticProps run
+
+- `getStaticProps` always runs on the server and never on the client. You can validate code written inside `getStaticProps` is removed from the client-side bundle with this tool.
+
+  - `getStaticProps` always runs during next build
+  - `getStaticProps` runs in the background when using fallback: true
+  - `getStaticProps` is called before initial render when using fallback: blocking
+  - `getStaticProps` runs in the background when using revalidate
+  - `getStaticProps` runs on-demand in the background when using revalidate()
+
+- When combined with Incremental Static Regeneration, `getStaticProps` will run in the background while the stale page is being revalidated, and the fresh page served to the browser.
+
+- `getStaticProps` does not have access to the incoming request (such as query parameters or HTTP headers) as it generates static HTML. If you need access to the request for your page, consider using Middleware in addition to `getStaticProps`.
+
+### [SSR with getServerSideProps](https://nextjs.org/docs/basic-features/data-fetching/get-server-side-props)
+
+If you export a function called getServerSideProps (Server-Side Rendering) from a page, Next.js will pre-render this page on each request using the data returned by getServerSideProps.
+
+```jsx
+export async function getServerSideProps(context) {
+  return {
+    props: {}, // will be passed to the page component as props
+  };
+}
+```
+
+- getServerSideProps only runs on server-side and never runs on the browser. If a page uses getServerSideProps, then:
+
+  - When you request this page directly, getServerSideProps runs at request time, and this page will be pre-rendered with the returned props
+  - When you request this page on client-side page transitions through next/link or next/router, Next.js sends an API request to the server, which runs getServerSideProps
+
+- getServerSideProps returns JSON which will be used to render the page. All this work will be handled automatically by Next.js, so you don’t need to do anything extra as long as you have getServerSideProps defined.
+- getServerSideProps can only be exported from a page. You can’t export it from non-page files.
+
+## [Incremental Static Regeneration](https://nextjs.org/docs/basic-features/data-fetching/incremental-static-regeneration)
+
+- Next.js allows you to create or update static pages after you’ve built your site. Incremental Static Regeneration (ISR) enables you to use static-generation on a per-page basis, without needing to rebuild the entire site. With ISR, you can retain the benefits of static while scaling to millions of pages.
+
+- To use ISR, add the revalidate prop to getStaticProps:
+
+```jsx
+function Blog({ posts }) {
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>{post.title}</li>
+      ))}
+    </ul>
+  );
+}
+
+// This function gets called at build time on server-side.
+// It may be called again, on a serverless function, if
+// revalidation is enabled and a new request comes in
+export async function getStaticProps() {
+  const res = await fetch("https://.../posts");
+  const posts = await res.json();
+
+  return {
+    props: {
+      posts,
+    },
+    // Next.js will attempt to re-generate the page:
+    // - When a request comes in
+    // - At most once every 10 seconds
+    revalidate: 10, // In seconds
+  };
+}
+
+// This function gets called at build time on server-side.
+// It may be called again, on a serverless function, if
+// the path has not been generated.
+export async function getStaticPaths() {
+  const res = await fetch("https://.../posts");
+  const posts = await res.json();
+
+  // Get the paths we want to pre-render based on posts
+  const paths = posts.map((post) => ({
+    params: { id: post.id },
+  }));
+
+  // We'll pre-render only these paths at build time.
+  // { fallback: blocking } will server-render pages
+  // on-demand if the path doesn't exist.
+  return { paths, fallback: "blocking" };
+}
+
+export default Blog;
+```
+
+- When a request is made to a page that was pre-rendered at build time, it will initially show the cached page.
+
+  - Any requests to the page after the initial request and before 10 seconds are also cached - and instantaneous.
+  - After the 10-second window, the next request will still show the cached (stale) page
+  - Next.js triggers a regeneration of the page in the background.
+  - Once the page generates successfully, Next.js will invalidate the cache and show the updated page. If the background regeneration fails, the old page would still be unaltered.
+
+- When a request is made to a path that hasn’t been generated, Next.js will server-render the page on the first request. Future requests will serve the static file from the cache. ISR on Vercel persists the cache globally and handles rollbacks.
+
+## [Client-side data fetching](https://nextjs.org/docs/basic-features/data-fetching/client-side#client-side-data-fetching-with-swr)
+
+- Client-side data fetching is useful when your page doesn't require SEO indexing, when you don't need to pre-render your data, or when the content of your pages needs to update frequently. Unlike the server-side rendering APIs, you can use client-side data fetching at the component level.
+
+- If done at the page level, the data is fetched at runtime, and the content of the page is updated as the data changes. When used at the component level, the data is fetched at the time of the component mount, and the content of the component is updated as the data changes.
+
+- It's important to note that using client-side data fetching can affect the performance of your application and the load speed of your pages. This is because the data fetching is done at the time of the component or pages mount, and the data is not cached. -->
+
+### Client-side data fetching with SWR
+
+- The team behind Next.js has created a React hook library for data fetching called SWR. It is highly recommended if you are fetching data on the client-side. It handles caching, revalidation, focus tracking, refetching on intervals, and more.
+
+- Using the same example as above, we can now use SWR to fetch the profile data. SWR will automatically cache the data for us and will revalidate the data if it becomes stale.
+
+- For more information on using SWR, check out the SWR docs.
+
+```jsx
+import useSWR from "swr";
+
+const fetcher = (...args) => fetch(...args).then((res) => res.json());
+
+function Profile() {
+  const { data, error } = useSWR("/api/profile-data", fetcher);
+
+  if (error) return <div>Failed to load</div>;
+  if (!data) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <h1>{data.name}</h1>
+      <p>{data.bio}</p>
+    </div>
+  );
+}
+```
