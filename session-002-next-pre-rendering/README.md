@@ -351,3 +351,27 @@ function Profile() {
   );
 }
 ```
+
+## Pre-rendering & Data Fetching Summary
+
+Pre-rendering refers to the process of generating HTML in advance which results in better performance and SE0 Next JS supports two forms of pre-rendering
+
+- Static Generation and Server-side Rendering Static Generation
+
+  - A method of pre-rendering where the HTML pages are generated at build time
+  - Pages can be built once, cached by a CDN and served to clients almost instantly
+  - Example: Marketing or Blogging site
+  - For a normal page, use getStaticProps function to fetch the data ahead of time
+  - For a dynamic page, you also need the getStaticPaths function
+  - fallback: false I true I 'blocking'
+  - Pages cannot be updated without a full re-build
+  - Incremental Static Regeneration
+
+- Server-side rendering
+  - Fetch data at request time
+  - Personalize data based on user information in the incoming request
+  - Example: News listing page
+  - getServerSideProps function helps with SSR data fetching
+  - Combining pre-rendering with client-side data fetching
+  - Shallow routing — Routing without calling getStaticProps/getServerSideProps
+
