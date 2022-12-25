@@ -192,3 +192,112 @@ export default function HomePage() {
   );
 }
 ```
+
+# Next Build, start and export
+
+- next build — Builds the application for production in the .next folder
+- next start - Starts a Node.js server that supports hybrid pages, serving both statically generated and server-side rendered pages
+- next export - Exports all your pages to static HTM L files that you can serve without the need of a Node.js server
+- Host your app on any static hosting service or a CDN without having to maintain a server
+- Cannot use ISR or SSR
+- Client side data fetching for dynamic content
+- Landing pages, blogs and any app where the content is generated at build time
+
+# [Preview Mode](https://nextjs.org/docs/advanced-features/preview-mode)
+
+- In the Pages documentation and the Data Fetching documentation, we talked about how to pre-render a page at build time (Static Generation) using getStaticProps and getStaticPaths.
+
+- Static Generation is useful when your pages fetch data from a headless CMS. However, it’s not ideal when you’re writing a draft on your headless CMS and want to preview the draft immediately on your page. You’d want Next.js to render these pages at request time instead of build time and fetch the draft content instead of the published content. You’d want Next.js to bypass Static Generation only for this specific case.
+
+- Next.js has a feature called Preview Mode which solves this problem.
+
+## [Redirects](https://nextjs.org/docs/api-reference/next.config.js/redirects) 
+
+- Redirects allow you to redirect an incoming request path to a different destination path.
+
+- To use Redirects you can use the redirects key in `next.config.js`:
+
+```jsx
+module.exports = {
+  async redirects() {
+    return [
+      {
+        source: "/about",
+        destination: "/",
+        permanent: true,
+      },
+
+    ];
+  },
+};
+```
+- redirects is an async function that expects an array to be returned holding objects with source, destination, and permanent properties:
+
+  - `source` is the incoming request path pattern.
+  - `destination` is the path you want to route to.
+  - `permanent` `true` or `false` - if true will use the 308 status code which instructs clients/search engines to cache the redirect forever, if `false` will use the 307 status code which is temporary and is not cached.
+  - `basePath`: `false` or `undefined` - if false the basePath won't be included when matching, can be used for external redirects only.
+  - `locale`: false or undefined - whether the locale should not be included when matching.
+  - `has` is an array of has objects with the `type`, `key` and `value` properties.
+  - `missing` is an array of missing objects with the `type`, `key` and `value` properties.
+
+- Redirects are checked before the filesystem which includes pages and /public files.
+
+- Redirects are not applied to client-side routing (Link, router.push), unless Middleware is present and matches the path.
+
+- When a redirect is applied, any query values provided in the request will be passed through to the redirect destination. For example, see the following redirect configuration:
+```jsx
+{
+  source: '/old-blog/:path*',
+  destination: '/blog/:path*',
+  permanent: false
+}
+```
+- When `/old-blog/post-1?hello=world` is requested, the client will be redirected to `/blog/post-1?hello=world`.
+
+## [Path Matching](https://nextjs.org/docs/api-reference/next.config.js/redirects#path-matching)
+- Path matches are allowed, for example /old-blog/:slug will match /old-blog/hello-world (no nested paths):
+```jsx
+module.exports = {
+  async redirects() {
+    return [
+      {
+        source: '/old-blog/:slug',
+        destination: '/news/:slug', // Matched parameters can be used in the destination
+        permanent: true,
+      },
+    ]
+  },
+}
+```
+
+# [Environment Variables](https://nextjs.org/docs/basic-features/environment-variables)
+
+- Next.js comes with built-in support for environment variables, which allows you to do the following:
+  - Use `.env.local` to load environment variables
+  - Expose environment variables to the browser by prefixing with `NEXT_PUBLIC_`
+
+### Loading Environment Variables
+- Next.js has built-in support for loading environment variables from `.env.local` into `process.env`.
+An example `.env.local:`
+```
+DB_HOST=localhost
+DB_USER=myuser
+DB_PASS=mypassword
+```
+This loads `process.env.DB_HOST`, `process.env.DB_USER`, and `process.env.DB_PASS` into the Node.js environment automatically allowing you to use them in Next.js data fetching methods and API routes.
+
+For example, using `getStaticProps`:
+
+```jsx
+// pages/index.js
+export async function getStaticProps() {
+  const db = await myDB.connect({
+    host: process.env.DB_HOST,
+    username: process.env.DB_USER,
+    password: process.env.DB_PASS,
+  })
+  // ...
+}
+```
+
