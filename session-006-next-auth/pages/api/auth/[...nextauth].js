@@ -13,7 +13,7 @@ export default NextAuth({
     jwt: true
   },
   jwt: {
-    secret: 'asdcvbtjhm'
+    secret: 'asdxzczx'
   },
   callbacks: {
     async jwt(token, user) {
